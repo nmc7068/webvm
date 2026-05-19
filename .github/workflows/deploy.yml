@@ -68,13 +68,22 @@ jobs:
           WEBVM_MODE=github npm run build
           mv build/* ${{ env.DEPLOY_DIR }}/
 
-      - name: Localize VM Engine
+      - name: Apply Extension Masking (The PNG Trick)
         run: |
-          # Download the engine scripts so they are hosted on YOUR site
-          curl -L https://cdn.leaningtech.com/cheerpx.js -o ${{ env.DEPLOY_DIR }}/cheerpx.js
+          # 1. Download and Rename the Engine
+          curl -L https://cdn.leaningtech.com/cheerpx.js -o ${{ env.DEPLOY_DIR }}/lib_assets_01.png
           
-          # Force index.html to look at the local script instead of the CDN
-          sed -i 's|https://cdn.leaningtech.com/cheerpx.js|cheerpx.js|g' ${{ env.DEPLOY_DIR }}/index.html
+          # 2. Find and rename any WASM or EXT2 files to PNG
+          cd ${{ env.DEPLOY_DIR }}
+          # Rename the disk chunks (currently .txt from the split command) to .png
+          find . -name "*.txt" -exec sh -c 'mv "$1" "${1%.txt}.png"' _ {} \;
+          
+          # 3. Update the main index.html to call the renamed engine
+          sed -i 's|https://cdn.leaningtech.com/cheerpx.js|lib_assets_01.png|g' index.html
+
+          # 4. Update the Config to find renamed Disk Chunks
+          # This tells the loader to look for .png instead of the default .txt
+          sed -i 's/\.txt/.png/g' config_github_terminal.js
 
       - name: Apply CKM Bypass (Headers & Service Worker)
         run: |
