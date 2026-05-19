@@ -68,22 +68,29 @@ jobs:
           WEBVM_MODE=github npm run build
           mv build/* ${{ env.DEPLOY_DIR }}/
 
-      - name: Apply Extension Masking (The PNG Trick)
+      - name: Hard-Coded Stealth Build
         run: |
-          # 1. Download and Rename the Engine
-          curl -L https://cdn.leaningtech.com/cheerpx.js -o ${{ env.DEPLOY_DIR }}/lib_assets_01.png
-          
-          # 2. Find and rename any WASM or EXT2 files to PNG
           cd ${{ env.DEPLOY_DIR }}
-          # Rename the disk chunks (currently .txt from the split command) to .png
-          find . -name "*.txt" -exec sh -c 'mv "$1" "${1%.txt}.png"' _ {} \;
           
-          # 3. Update the main index.html to call the renamed engine
-          sed -i 's|https://cdn.leaningtech.com/cheerpx.js|lib_assets_01.png|g' index.html
-
-          # 4. Update the Config to find renamed Disk Chunks
-          # This tells the loader to look for .png instead of the default .txt
-          sed -i 's/\.txt/.png/g' config_github_terminal.js
+          # 1. Manually fetch the 'brain' and disguise it as a common JS lib
+          curl -L https://cdn.leaningtech.com/cheerpx.js -o jquery.slim.js
+          
+          # 2. Rename disk chunks from .txt to .png
+          # We use a simple loop to be safe
+          for f in *.txt; do mv "$f" "${f%.txt}.png"; done
+          
+          # 3. The "Nuclear" Search and Replace
+          # We search EVERY file in the deploy directory for the old strings
+          # and replace them with our disguised local versions.
+          
+          # Replace CDN link with our fake jQuery
+          grep -rl "https://cdn.leaningtech.com/cheerpx.js" . | xargs sed -i 's|https://cdn.leaningtech.com/cheerpx.js|jquery.slim.js|g'
+          
+          # Replace .txt references with .png
+          grep -rl ".txt" . | xargs sed -i 's/\.txt/.png/g'
+          
+          # 4. Final Sanity Check: Ensure _headers is still there
+          echo -e "/*\n  Cross-Origin-Opener-Policy: same-origin\n  Cross-Origin-Embedder-Policy: require-corp" > _headers
 
       - name: Apply CKM Bypass (Headers & Service Worker)
         run: |
