@@ -68,6 +68,14 @@ jobs:
           WEBVM_MODE=github npm run build
           mv build/* ${{ env.DEPLOY_DIR }}/
 
+      - name: Localize VM Engine
+        run: |
+          # Download the engine scripts so they are hosted on YOUR site
+          curl -L https://cdn.leaningtech.com/cheerpx.js -o ${{ env.DEPLOY_DIR }}/cheerpx.js
+          
+          # Force index.html to look at the local script instead of the CDN
+          sed -i 's|https://cdn.leaningtech.com/cheerpx.js|cheerpx.js|g' ${{ env.DEPLOY_DIR }}/index.html
+
       - name: Apply CKM Bypass (Headers & Service Worker)
         run: |
           # 1. Create Netlify Headers file
